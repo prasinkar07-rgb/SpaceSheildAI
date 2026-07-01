@@ -1,0 +1,1088 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SpaceShield AI — Space Debris Intelligence</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --void: #020408;
+    --deep: #060d18;
+    --panel: #0b1626;
+    --border: #1a3050;
+    --cyan: #00e5ff;
+    --cyan-dim: rgba(0,229,255,0.12);
+    --cyan-glow: rgba(0,229,255,0.35);
+    --green: #00ff88;
+    --green-dim: rgba(0,255,136,0.1);
+    --amber: #ffaa00;
+    --red: #ff3366;
+    --text: #c8dff0;
+    --muted: #4a6a8a;
+    --white: #f0f8ff;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--void);
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    overflow-x: hidden;
+    min-height: 100vh;
+  }
+
+  /* ── STARFIELD ─────────────────────────────────────── */
+  #stars-canvas {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  }
+
+  /* ── NAV ────────────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 48px;
+    background: linear-gradient(180deg, rgba(2,4,8,0.95) 0%, transparent 100%);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid rgba(0,229,255,0.08);
+  }
+
+  .nav-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+    text-shadow: 0 0 20px var(--cyan-glow);
+    display: flex; align-items: center; gap: 10px;
+    transform-origin: left center;
+    animation: logo-intro 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  @keyframes logo-intro {
+    0% { transform: scale(3.6); }
+    100% { transform: scale(1); }
+  }
+
+  .nav-logo span.orbit-icon {
+    width: 28px; height: 28px;
+    border: 2px solid var(--cyan);
+    border-radius: 50%;
+    position: relative;
+    display: inline-block;
+    box-shadow: 0 0 12px var(--cyan-glow), inset 0 0 8px var(--cyan-dim);
+    animation: spin-orbit 6s linear infinite;
+  }
+  .nav-logo span.orbit-icon::after {
+    content: '';
+    position: absolute;
+    width: 6px; height: 6px;
+    background: var(--cyan);
+    border-radius: 50%;
+    top: -4px; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 8px var(--cyan);
+  }
+  @keyframes spin-orbit { to { transform: rotate(360deg); } }
+
+  .nav-links { display: flex; gap: 36px; list-style: none; }
+  .nav-links a {
+    color: var(--muted); font-size: 0.85rem; text-decoration: none;
+    letter-spacing: 0.06em; text-transform: uppercase; font-weight: 500;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--cyan); }
+
+  .nav-cta {
+    background: transparent;
+    border: 1px solid var(--cyan);
+    color: var(--cyan);
+    padding: 9px 22px;
+    border-radius: 4px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background 0.2s, box-shadow 0.2s;
+  }
+  .nav-cta:hover {
+    background: var(--cyan-dim);
+    box-shadow: 0 0 20px var(--cyan-glow);
+  }
+
+  /* ── HERO ───────────────────────────────────────────── */
+  .hero {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 120px 24px 80px;
+  }
+
+  /* Orbital ring behind hero text */
+  .orbital-ring {
+    position: absolute;
+    width: 600px; height: 600px;
+    border: 1px solid rgba(0,229,255,0.12);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: pulse-ring 4s ease-in-out infinite;
+  }
+  .orbital-ring:nth-child(2) {
+    width: 820px; height: 820px;
+    border-color: rgba(0,229,255,0.06);
+    animation-duration: 6s; animation-delay: -2s;
+  }
+  .orbital-ring:nth-child(3) {
+    width: 1050px; height: 1050px;
+    border-color: rgba(0,229,255,0.04);
+    animation-duration: 8s; animation-delay: -4s;
+  }
+  @keyframes pulse-ring {
+    0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+    50% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+  }
+
+  /* Rotating debris dot on ring */
+  .debris-dot {
+    position: absolute;
+    width: 600px; height: 600px;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    animation: spin-debris 12s linear infinite;
+  }
+  .debris-dot::after {
+    content: '';
+    position: absolute;
+    width: 8px; height: 8px;
+    background: var(--cyan);
+    border-radius: 50%;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    box-shadow: 0 0 16px var(--cyan), 0 0 32px var(--cyan-glow);
+  }
+  @keyframes spin-debris { to { transform: translate(-50%, -50%) rotate(360deg); } }
+
+  .status-badge {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--green-dim);
+    border: 1px solid rgba(0,255,136,0.25);
+    border-radius: 100px;
+    padding: 6px 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--green);
+    letter-spacing: 0.1em;
+    margin-bottom: 32px;
+    position: relative; z-index: 2;
+  }
+  .status-dot {
+    width: 7px; height: 7px;
+    background: var(--green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--green);
+    animation: blink 1.4s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+
+  .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 20px;
+    position: relative; z-index: 2;
+  }
+
+  .hero-title {
+    font-size: clamp(2.8rem, 6vw, 5.2rem);
+    font-weight: 700;
+    line-height: 1.05;
+    color: var(--white);
+    position: relative; z-index: 2;
+    margin-bottom: 12px;
+  }
+  .hero-title .glow-word {
+    color: var(--cyan);
+    text-shadow: 0 0 40px var(--cyan-glow), 0 0 80px rgba(0,229,255,0.2);
+  }
+
+  .hero-subtitle {
+    font-size: 1.15rem;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.7;
+    margin: 24px auto 0;
+    position: relative; z-index: 2;
+    font-weight: 400;
+  }
+
+  .hero-actions {
+    display: flex; gap: 16px; justify-content: center;
+    margin-top: 48px; position: relative; z-index: 2;
+    flex-wrap: wrap;
+  }
+
+  .btn-primary {
+    background: var(--cyan);
+    color: var(--void);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    padding: 16px 36px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 10px;
+    transition: box-shadow 0.25s, transform 0.2s;
+    box-shadow: 0 0 24px var(--cyan-glow);
+  }
+  .btn-primary:hover {
+    box-shadow: 0 0 48px var(--cyan-glow), 0 0 80px rgba(0,229,255,0.3);
+    transform: translateY(-2px);
+  }
+  .btn-primary svg { width: 18px; height: 18px; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.82rem;
+    letter-spacing: 0.08em;
+    padding: 16px 28px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex; align-items: center; gap: 10px;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); }
+
+  /* ── LIVE TICKER ────────────────────────────────────── */
+  .ticker {
+    position: relative; z-index: 1;
+    background: rgba(11,22,38,0.8);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(8px);
+    overflow: hidden;
+    padding: 14px 0;
+  }
+  .ticker-inner {
+    display: flex;
+    animation: scroll-ticker 28s linear infinite;
+    white-space: nowrap;
+  }
+  .ticker-item {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    padding: 0 48px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .ticker-item .dot { width: 5px; height: 5px; border-radius: 50%; }
+  .ticker-item.crit .dot { background: var(--red); box-shadow: 0 0 6px var(--red); }
+  .ticker-item.warn .dot { background: var(--amber); box-shadow: 0 0 6px var(--amber); }
+  .ticker-item.ok .dot { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  @keyframes scroll-ticker { 0%{transform:translateX(0);} 100%{transform:translateX(-50%);} }
+
+  /* ── SECTION STRUCTURE ──────────────────────────────── */
+  section {
+    position: relative; z-index: 1;
+    padding: 100px 48px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .section-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--cyan);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-label::before {
+    content: ''; display: block;
+    width: 28px; height: 1px;
+    background: var(--cyan);
+  }
+  .section-title {
+    font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.15;
+    margin-bottom: 16px;
+  }
+  .section-body {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 560px;
+    line-height: 1.75;
+  }
+
+  /* ── FEATURES GRID ──────────────────────────────────── */
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border: 1px solid var(--border);
+    margin-top: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .feature-card {
+    background: var(--deep);
+    padding: 40px 36px;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: var(--gradient, linear-gradient(90deg, var(--cyan), transparent));
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feature-card:hover { background: var(--panel); }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-icon {
+    width: 48px; height: 48px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 20px;
+    position: relative;
+  }
+  .feature-icon.cyan-bg { background: var(--cyan-dim); box-shadow: 0 0 20px var(--cyan-dim); }
+  .feature-icon.green-bg { background: var(--green-dim); box-shadow: 0 0 20px var(--green-dim); }
+  .feature-icon.amber-bg { background: rgba(255,170,0,0.1); box-shadow: 0 0 20px rgba(255,170,0,0.15); }
+  .feature-icon.red-bg { background: rgba(255,51,102,0.1); box-shadow: 0 0 20px rgba(255,51,102,0.15); }
+
+  .feature-card h3 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 10px;
+    letter-spacing: 0.01em;
+  }
+  .feature-card p {
+    font-size: 0.88rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .feature-tag {
+    display: inline-block;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.62rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 100px;
+    margin-top: 16px;
+  }
+  .feature-tag.live { background: rgba(0,255,136,0.12); color: var(--green); border: 1px solid rgba(0,255,136,0.25); }
+  .feature-tag.coming { background: rgba(255,170,0,0.1); color: var(--amber); border: 1px solid rgba(255,170,0,0.25); }
+
+  /* ── STATS ROW ──────────────────────────────────────── */
+  .stats-section {
+    background: var(--deep);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 48px;
+  }
+  .stats-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--border);
+  }
+  .stat-cell {
+    background: var(--deep);
+    padding: 40px 32px;
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 700;
+    color: var(--cyan);
+    text-shadow: 0 0 24px var(--cyan-glow);
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* ── AI SECTION ──────────────────────────────────────── */
+  .ai-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .terminal-block {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 60px rgba(0,229,255,0.06);
+  }
+  .terminal-bar {
+    background: var(--deep);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 20px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .t-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .t-dot.r { background: #ff5f57; }
+  .t-dot.y { background: #febc2e; }
+  .t-dot.g { background: #28c840; }
+  .terminal-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-left: auto;
+    letter-spacing: 0.08em;
+  }
+  .terminal-body {
+    padding: 24px 24px 28px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+    line-height: 1.9;
+  }
+  .t-line { display: block; }
+  .t-prompt { color: var(--green); }
+  .t-cmd { color: var(--white); }
+  .t-out { color: var(--muted); }
+  .t-val { color: var(--cyan); }
+  .t-warn { color: var(--amber); }
+  .t-err { color: var(--red); }
+  .t-cursor {
+    display: inline-block;
+    width: 9px; height: 14px;
+    background: var(--cyan);
+    vertical-align: middle;
+    animation: cursor-blink 1s step-end infinite;
+  }
+  @keyframes cursor-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+  /* ── UPCOMING ────────────────────────────────────────── */
+  .upcoming-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 24px;
+    margin-top: 60px;
+  }
+  .upcoming-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .upcoming-card::after {
+    content: 'COMING SOON';
+    position: absolute;
+    top: 20px; right: -28px;
+    background: var(--amber);
+    color: var(--void);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.58rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 4px 40px;
+    transform: rotate(45deg);
+  }
+  .upcoming-card h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--white);
+    margin-bottom: 10px;
+  }
+  .upcoming-card p {
+    font-size: 0.85rem;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+  .upcoming-icon {
+    font-size: 1.8rem;
+    margin-bottom: 16px;
+    display: block;
+    filter: grayscale(0.3);
+  }
+
+  /* ── CTA BANNER ─────────────────────────────────────── */
+  .cta-banner {
+    position: relative; z-index: 1;
+    text-align: center;
+    padding: 120px 48px;
+    overflow: hidden;
+  }
+  .cta-glow {
+    position: absolute;
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(0,229,255,0.08) 0%, transparent 70%);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+  .cta-banner h2 {
+    font-size: clamp(2rem, 4vw, 3.4rem);
+    font-weight: 700;
+    color: var(--white);
+    line-height: 1.1;
+    margin-bottom: 20px;
+    position: relative; z-index: 1;
+  }
+  .cta-banner p {
+    font-size: 1.05rem;
+    color: var(--muted);
+    max-width: 480px;
+    margin: 0 auto 48px;
+    position: relative; z-index: 1;
+    line-height: 1.7;
+  }
+
+  /* ── FOOTER ──────────────────────────────────────────── */
+  footer {
+    position: relative; z-index: 1;
+    border-top: 1px solid var(--border);
+    padding: 40px 48px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  footer .footer-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.9rem;
+    color: var(--cyan);
+    letter-spacing: 0.08em;
+  }
+  footer p {
+    font-size: 0.78rem;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+
+  /* ── DIVIDER ─────────────────────────────────────────── */
+  .hr-glow {
+    position: relative; z-index: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+  }
+
+  /* ── SCAN DEMO CARD ──────────────────────────────────── */
+  .scan-demo {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--panel);
+  }
+  .scan-demo-img {
+    width: 100%;
+    aspect-ratio: 4/3;
+    background: linear-gradient(135deg, #040a14 0%, #080f1e 40%, #040c18 100%);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+  /* Scanning line animation */
+  .scan-line {
+    position: absolute;
+    left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--cyan), transparent);
+    box-shadow: 0 0 12px var(--cyan-glow);
+    animation: scan 3s ease-in-out infinite;
+  }
+  @keyframes scan {
+    0%{top:0;opacity:0;} 5%{opacity:1;} 95%{opacity:1;} 100%{top:100%;opacity:0;}
+  }
+  /* Debris crosshair */
+  .crosshair-container {
+    position: relative; width: 200px; height: 200px;
+  }
+  .crosshair-ring {
+    position: absolute;
+    border: 1px solid rgba(0,229,255,0.5);
+    border-radius: 50%;
+    top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    animation: crosshair-pulse 2s ease-in-out infinite;
+  }
+  .crosshair-ring:nth-child(1) { width: 60px; height: 60px; }
+  .crosshair-ring:nth-child(2) { width: 100px; height: 100px; border-color: rgba(0,229,255,0.25); animation-delay: -0.5s; }
+  .crosshair-ring:nth-child(3) { width: 160px; height: 160px; border-color: rgba(0,229,255,0.1); animation-delay: -1s; }
+  @keyframes crosshair-pulse {
+    0%,100%{opacity:0.5;} 50%{opacity:1;}
+  }
+  .crosshair-dot {
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%);
+    width: 10px; height: 10px;
+    background: var(--cyan);
+    border-radius: 50%;
+    box-shadow: 0 0 12px var(--cyan), 0 0 24px var(--cyan-glow);
+  }
+  .crosshair-h, .crosshair-v {
+    position: absolute; background: rgba(0,229,255,0.4);
+  }
+  .crosshair-h { top: 50%; left: 20px; right: 20px; height: 1px; margin-top: -0.5px; }
+  .crosshair-v { left: 50%; top: 20px; bottom: 20px; width: 1px; margin-left: -0.5px; }
+
+  .scan-readout {
+    padding: 20px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.74rem;
+    display: flex; gap: 24px; flex-wrap: wrap;
+  }
+  .readout-item { display: flex; flex-direction: column; gap: 3px; }
+  .readout-key { color: var(--muted); font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase; }
+  .readout-val { color: var(--cyan); }
+
+  /* ── RESPONSIVE ──────────────────────────────────────── */
+  @media (max-width: 900px) {
+    nav { padding: 16px 24px; }
+    .nav-links { display: none; }
+    section { padding: 60px 24px; }
+    .ai-section { grid-template-columns: 1fr; gap: 40px; }
+    .stats-inner { grid-template-columns: 1fr 1fr; }
+    .upcoming-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; gap: 16px; text-align: center; }
+  }
+  @media (max-width: 600px) {
+    .stats-inner { grid-template-columns: 1fr; }
+    .features-grid { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.001ms !important; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Starfield Canvas -->
+<canvas id="stars-canvas"></canvas>
+
+<!-- Navigation -->
+<nav>
+  <div class="nav-logo">
+    <span class="orbit-icon"></span>
+    SPACESHIELD AI
+  </div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#ai">AI Core</a></li>
+    <li><a href="#upcoming">Roadmap</a></li>
+  </ul>
+  <a href="/dashboard" class="nav-cta">LAUNCH DASHBOARD →</a>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="orbital-ring"></div>
+  <div class="orbital-ring"></div>
+  <div class="orbital-ring"></div>
+  <div class="debris-dot"></div>
+
+  <div class="status-badge">
+    <span class="status-dot"></span>
+    SYSTEMS OPERATIONAL — TRACKING 1,487 OBJECTS
+  </div>
+
+  <p class="hero-eyebrow">Orbital Intelligence Platform</p>
+
+  <h1 class="hero-title">
+    Track Every<br>
+    <span class="glow-word">Fragment</span><br>
+    in Orbit
+  </h1>
+
+  <p class="hero-subtitle">
+    Real-time AI-powered space debris monitoring. Scan objects with computer vision, 
+    assess collision risk, and converse with an orbital intelligence assistant.
+  </p>
+
+  <div class="hero-actions">
+    <a href="/dashboard" class="btn-primary">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+      </svg>
+      TRY THE APP
+    </a>
+    <a href="#features" class="btn-ghost">
+      EXPLORE FEATURES ↓
+    </a>
+  </div>
+</div>
+
+<!-- Live Ticker -->
+<div class="ticker">
+  <div class="ticker-inner" id="ticker-inner">
+    <!-- Duplicated for seamless loop -->
+    <span class="ticker-item crit"><span class="dot"></span> ALERT: COSMOS 2251 DEBRIS CLUSTER — ELEVATED RISK</span>
+    <span class="ticker-item ok"><span class="dot"></span> ISS ALTITUDE: 408.3 km — NOMINAL</span>
+    <span class="ticker-item warn"><span class="dot"></span> STARLINK-3104 TRAJECTORY ADJUSTED</span>
+    <span class="ticker-item ok"><span class="dot"></span> SCANNER ONLINE — LLAMA VISION 3.2 ACTIVE</span>
+    <span class="ticker-item crit"><span class="dot"></span> 27,540 km/h — AVERAGE DEBRIS VELOCITY</span>
+    <span class="ticker-item ok"><span class="dot"></span> GEMINI 2.5 FLASH ASSISTANT READY</span>
+    <span class="ticker-item warn"><span class="dot"></span> REGION 7 — CONGESTION LEVEL: HIGH</span>
+    <span class="ticker-item ok"><span class="dot"></span> TOTAL CATALOGUED OBJECTS: 27,000+</span>
+    <!-- Duplicate for infinite scroll -->
+    <span class="ticker-item crit"><span class="dot"></span> ALERT: COSMOS 2251 DEBRIS CLUSTER — ELEVATED RISK</span>
+    <span class="ticker-item ok"><span class="dot"></span> ISS ALTITUDE: 408.3 km — NOMINAL</span>
+    <span class="ticker-item warn"><span class="dot"></span> STARLINK-3104 TRAJECTORY ADJUSTED</span>
+    <span class="ticker-item ok"><span class="dot"></span> SCANNER ONLINE — LLAMA VISION 3.2 ACTIVE</span>
+    <span class="ticker-item crit"><span class="dot"></span> 27,540 km/h — AVERAGE DEBRIS VELOCITY</span>
+    <span class="ticker-item ok"><span class="dot"></span> GEMINI 2.5 FLASH ASSISTANT READY</span>
+    <span class="ticker-item warn"><span class="dot"></span> REGION 7 — CONGESTION LEVEL: HIGH</span>
+    <span class="ticker-item ok"><span class="dot"></span> TOTAL CATALOGUED OBJECTS: 27,000+</span>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="stats-section">
+  <div class="stats-inner">
+    <div class="stat-cell">
+      <div class="stat-value" data-target="27000">0</div>
+      <div class="stat-label">Catalogued Debris Objects</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-value" data-target="99" data-suffix="%">0%</div>
+      <div class="stat-label">Vision Model Accuracy</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-value" data-target="27500" data-suffix=" km/h">0</div>
+      <div class="stat-label">Avg. Fragment Velocity</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-value" data-target="420" data-suffix=" km">0</div>
+      <div class="stat-label">ISS Operational Altitude</div>
+    </div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <p class="section-label">Core Capabilities</p>
+  <h2 class="section-title">Orbital Intelligence,<br>Built for Precision</h2>
+  <p class="section-body">Every module of SpaceShield AI is designed around one goal: give you an unflinching picture of what's in orbit, how fast it's moving, and whether it's a threat.</p>
+
+  <div class="features-grid">
+
+    <div class="feature-card">
+      <div class="feature-icon cyan-bg">🛰️</div>
+      <h3>AI Debris Scanner</h3>
+      <p>Upload any orbital image and Llama 3.2 Vision instantly classifies the object — spent rocket stages, solar panel fragments, bolt shards — with confidence scoring and threat classification.</p>
+      <span class="feature-tag live">● Live</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon green-bg">💬</div>
+      <h3>Orbital Chat Assistant</h3>
+      <p>Ask anything about space debris, collision risk, or orbital mechanics. Powered by Gemini 2.5 Flash, the assistant understands telemetry context and gives precise, mission-ready answers.</p>
+      <span class="feature-tag live">● Live</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon amber-bg">📡</div>
+      <h3>Live Telemetry Feed</h3>
+      <p>Continuously streamed data: altitude, velocity, debris count, and risk level — refreshed in real time from orbital simulation arrays.</p>
+      <span class="feature-tag live">● Live</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon red-bg">🌐</div>
+      <h3>3D Debris Cloud Visualization</h3>
+      <p>An interactive three-dimensional orbital map showing active satellites, tracked debris clusters, and proximity threat vectors around Earth in real time.</p>
+      <span class="feature-tag live">● Live</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon cyan-bg">🔬</div>
+      <h3>Computer Vision Pipeline</h3>
+      <p>Roboflow-backed deep learning model trained specifically on space debris imagery. Detects, classifies, and measures objects with bounding-box precision — even at confidence thresholds as low as 15%.</p>
+      <span class="feature-tag live">● Live</span>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon green-bg">⚠️</div>
+      <h3>Risk Level Threat Engine</h3>
+      <p>Every scan returns a structured threat assessment: CRITICAL, ELEVATED, LOW, or CLEAR — with diameter estimates, velocity, and orbital footprint metrics to support decision-making.</p>
+      <span class="feature-tag live">● Live</span>
+    </div>
+
+  </div>
+</section>
+
+<div class="hr-glow"></div>
+
+<!-- AI SECTION -->
+<section id="ai" style="max-width:1200px;">
+  <div class="ai-section">
+    <div>
+      <p class="section-label">AI Core</p>
+      <h2 class="section-title">Two Models.<br>One Mission.</h2>
+      <p class="section-body">
+        The scanner pairs <strong style="color:var(--white)">Llama 3.2 Vision</strong> via Groq's inference gateway for sub-second object classification. The assistant runs on <strong style="color:var(--white)">Gemini 2.5 Flash</strong> for deep contextual space-domain Q&amp;A. Both operate simultaneously — scan and query in the same session.
+      </p>
+      <div style="margin-top:32px; display:flex; flex-direction:column; gap:14px;">
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 8px var(--cyan);flex-shrink:0;"></div>
+          <p style="font-size:0.88rem;color:var(--text);">JSON-enforced vision outputs for reliable structured data</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);flex-shrink:0;"></div>
+          <p style="font-size:0.88rem;color:var(--text);">Low-temperature inference for consistent threat classification</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:var(--amber);box-shadow:0 0 8px var(--amber);flex-shrink:0;"></div>
+          <p style="font-size:0.88rem;color:var(--text);">Asynchronous scanning — image upload never blocks the UI</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:20px;">
+      <!-- Terminal -->
+      <div class="terminal-block">
+        <div class="terminal-bar">
+          <span class="t-dot r"></span><span class="t-dot y"></span><span class="t-dot g"></span>
+          <span class="terminal-title">spaceshield-ai — scanner.py</span>
+        </div>
+        <div class="terminal-body">
+          <span class="t-line"><span class="t-prompt">›</span> <span class="t-cmd">scan_image(frame_2847.jpg)</span></span>
+          <span class="t-line t-out">  Encoding base64 payload...</span>
+          <span class="t-line t-out">  Dispatching to Llama 3.2 Vision...</span>
+          <span class="t-line"><span class="t-val">  {</span></span>
+          <span class="t-line"><span class="t-val">    "label": "Spent Rocket Stage",</span></span>
+          <span class="t-line"><span class="t-warn">    "threat_level": "ELEVATED RISK",</span></span>
+          <span class="t-line"><span class="t-val">    "accuracy": "94.7%",</span></span>
+          <span class="t-line"><span class="t-val">    "est_diameter": "3.2 meters",</span></span>
+          <span class="t-line"><span class="t-val">    "est_velocity": "27,450 km/h"</span></span>
+          <span class="t-line"><span class="t-val">  }</span></span>
+          <span class="t-line t-out">  Report filed. <span class="t-cursor"></span></span>
+        </div>
+      </div>
+
+      <!-- Scan demo visual -->
+      <div class="scan-demo">
+        <div class="scan-demo-img">
+          <div class="scan-line"></div>
+          <div class="crosshair-container">
+            <div class="crosshair-ring"></div>
+            <div class="crosshair-ring"></div>
+            <div class="crosshair-ring"></div>
+            <div class="crosshair-h"></div>
+            <div class="crosshair-v"></div>
+            <div class="crosshair-dot"></div>
+          </div>
+        </div>
+        <div class="scan-readout">
+          <div class="readout-item">
+            <span class="readout-key">Object</span>
+            <span class="readout-val">Solar Array Shard</span>
+          </div>
+          <div class="readout-item">
+            <span class="readout-key">Threat</span>
+            <span class="readout-val" style="color:var(--amber)">ELEVATED</span>
+          </div>
+          <div class="readout-item">
+            <span class="readout-key">Confidence</span>
+            <span class="readout-val">91.3%</span>
+          </div>
+          <div class="readout-item">
+            <span class="readout-key">Velocity</span>
+            <span class="readout-val">27,120 km/h</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="hr-glow"></div>
+
+<!-- UPCOMING FEATURES -->
+<section id="upcoming">
+  <p class="section-label">Roadmap</p>
+  <h2 class="section-title">What's Coming to SpaceShield AI</h2>
+  <p class="section-body">The mission doesn't stop here. We're building the next generation of orbital intelligence tools — from predictive collision paths to satellite constellation health monitoring.</p>
+
+  <div class="upcoming-grid">
+    <div class="upcoming-card">
+      <span class="upcoming-icon">🔮</span>
+      <h3>Collision Prediction Engine</h3>
+      <p>ML-driven conjunction analysis that forecasts close-approach events up to 72 hours ahead, with probability curves and recommended avoidance windows.</p>
+    </div>
+    <div class="upcoming-card">
+      <span class="upcoming-icon">🗺️</span>
+      <h3>TLE Orbit Propagator</h3>
+      <p>Input any Two-Line Element set and watch the real orbital path projected in 3D — past, present, and 24-hour future — rendered live in the browser.</p>
+    </div>
+    <div class="upcoming-card">
+      <span class="upcoming-icon">📸</span>
+      <h3>Multi-Frame Video Scanner</h3>
+      <p>Upload a video clip from telescopic or satellite cameras. The system scans frame-by-frame, tracks debris motion, and produces a consolidated threat report.</p>
+    </div>
+    <div class="upcoming-card">
+      <span class="upcoming-icon">🛡️</span>
+      <h3>Satellite Health Dashboard</h3>
+      <p>Monitor active satellite fleets — power, attitude, communication status, debris proximity buffer — from a single unified operations panel.</p>
+    </div>
+    <div class="upcoming-card">
+      <span class="upcoming-icon">🤖</span>
+      <h3>Autonomous Alert Agent</h3>
+      <p>An always-on background agent that watches designated orbital regions and sends SMS or email alerts the moment a new high-risk object is detected.</p>
+    </div>
+    <div class="upcoming-card">
+      <span class="upcoming-icon">📊</span>
+      <h3>Debris Density Heatmaps</h3>
+      <p>Time-animated global heatmaps showing how debris density evolves across orbital shells over days, months, and years — critical for mission planning.</p>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<div class="cta-banner">
+  <div class="cta-glow"></div>
+  <h2>The Debris Doesn't<br>Wait. Neither Should You.</h2>
+  <p>Open the dashboard, upload your first image, and let the AI do the rest. SpaceShield AI is running right now.</p>
+  <a href="/dashboard" class="btn-primary" style="display:inline-flex;">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+      <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor" stroke="none"/>
+    </svg>
+    LAUNCH SPACESHIELD AI
+  </a>
+</div>
+
+<!-- FOOTER -->
+<footer>
+  <span class="footer-logo">SPACESHIELD AI</span>
+  <p>Built with Gemini 2.5 Flash · Llama 3.2 Vision · Roboflow CV</p>
+  <p style="color:var(--muted);font-size:0.75rem;">Orbital data is simulated for demonstration.</p>
+</footer>
+
+<script>
+// ── STARFIELD ─────────────────────────────────────────────
+(function() {
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  let stars = [];
+  const N = 220;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+
+  function initStars() {
+    stars = [];
+    for (let i = 0; i < N; i++) {
+      stars.push({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        r: Math.random() * 1.4 + 0.2,
+        alpha: Math.random() * 0.7 + 0.1,
+        speed: Math.random() * 0.012 + 0.003,
+        phase: Math.random() * Math.PI * 2
+      });
+    }
+  }
+
+  let frame = 0;
+  function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    frame++;
+    stars.forEach(s => {
+      const twinkle = 0.5 + 0.5 * Math.sin(frame * s.speed + s.phase);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(200,225,255,${s.alpha * twinkle})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+
+  resize();
+  initStars();
+  draw();
+  window.addEventListener('resize', () => { resize(); initStars(); });
+})();
+
+// ── STAT COUNTER ANIMATION ────────────────────────────────
+(function() {
+  const cells = document.querySelectorAll('.stat-value[data-target]');
+  const seen = new Set();
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting && !seen.has(entry.target)) {
+        seen.add(entry.target);
+        const el = entry.target;
+        const target = parseInt(el.dataset.target);
+        const suffix = el.dataset.suffix || '';
+        let start = 0;
+        const duration = 1800;
+        const startTime = performance.now();
+        function step(now) {
+          const p = Math.min((now - startTime) / duration, 1);
+          const ease = 1 - Math.pow(1 - p, 3);
+          const val = Math.floor(ease * target);
+          el.textContent = val.toLocaleString() + suffix;
+          if (p < 1) requestAnimationFrame(step);
+        }
+        requestAnimationFrame(step);
+      }
+    });
+  }, { threshold: 0.3 });
+
+  cells.forEach(c => observer.observe(c));
+})();
+
+// ── SCROLL REVEAL ─────────────────────────────────────────
+(function() {
+  const els = document.querySelectorAll('.feature-card, .upcoming-card, .stat-cell');
+  els.forEach((el, i) => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = `opacity 0.5s ${i * 0.05}s ease, transform 0.5s ${i * 0.05}s ease`;
+  });
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+  els.forEach(el => obs.observe(el));
+})();
+</script>
+</body>
+</html>
