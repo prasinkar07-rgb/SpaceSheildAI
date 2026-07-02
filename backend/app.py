@@ -74,6 +74,14 @@ def chat():
         response = client.models.generate_content(
             model='gemini-2.5-flash',
             contents=user_message,
+            config={
+                'system_instruction': (
+                    "You are the SpaceShield AI telemetry assistant. Keep every "
+                    "answer concise: respond in at most 5 short bullet points "
+                    "(use '- ' for each), no long paragraphs, no headers, no "
+                    "restating the question."
+                )
+            },
         )
         return jsonify({'reply': response.text})
     except Exception as e:
