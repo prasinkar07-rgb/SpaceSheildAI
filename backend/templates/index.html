@@ -1089,9 +1089,10 @@
     import * as THREE from 'three';
     import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-    // Absolute base URL for Flask — works whether the app is opened directly
-    // or embedded inside an iframe (Claude sidebar, etc.)
-    const FLASK_BASE = 'http://127.0.0.1:5000';
+    // Relative base URL for Flask — resolves against whatever host is
+    // currently serving the page (localhost during dev, the Render domain
+    // in production), instead of being pinned to one machine.
+    const FLASK_BASE = '';
     
     const questionDataset = [
       { question: "What is space debris?", options: ["Natural stardust", "Human-made junk orbiting Earth", "Alien communication towers", "Clouds in the stratosphere"], correct_index: 1, fact: "Space debris includes old defunct satellites, spent rocket sections, and broken spacecraft bits." },
@@ -2582,6 +2583,52 @@ function loadGenericPlaceholderGroup() {
     document.getElementById('btnRefreshSim').addEventListener('click', handleRefreshClick);
     document.getElementById('btnStartQuiz').addEventListener('click', loadQuestion);
     document.getElementById('btnRetryQuiz').addEventListener('click', loadQuestion);
+
+    // =====================================================================
+    // CHAT
+    // =====================================================================
+    async function sendChatMessage() {
+      const input = document.getElementById('userInput');
+      const chatBox = document.getElementById('chatBox');
+      const sendBtn = document.getElementById('btnSendMessage');
+      const message = input.value.trim();
+      if (!message) return;
+
+      const userMsg = document.createElement('div');
+      userMsg.className = 'msg user';
+      userMsg.textContent = message;
+      chatBox.appendChild(userMsg);
+      input.value = '';
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      sendBtn.disabled = true;
+      const botMsg = document.createElement('div');
+      botMsg.className = 'msg bot';
+      botMsg.textContent = 'Thinking...';
+      chatBox.appendChild(botMsg);
+      chatBox.scrollTop = chatBox.scrollHeight;
+
+      try {
+        const res = await fetch(`${FLASK_BASE}/api/chat`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Chat request failed.');
+        botMsg.textContent = data.reply;
+      } catch (err) {
+        botMsg.textContent = `Error: ${err.message}`;
+      } finally {
+        sendBtn.disabled = false;
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }
+    }
+
+    document.getElementById('btnSendMessage').addEventListener('click', sendChatMessage);
+    document.getElementById('userInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendChatMessage();
+    });
     document.getElementById('btnPrevQuestion').addEventListener('click', handlePreviousNavigation);
     document.getElementById('btnNextQuestion').addEventListener('click', handleNextNavigation);
     
