@@ -59,12 +59,28 @@
     letter-spacing: 0.08em;
     text-shadow: 0 0 20px var(--cyan-glow);
     display: flex; align-items: center; gap: 10px;
-    transform-origin: left center;
-    animation: logo-intro 2.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    will-change: transform;
   }
-  @keyframes logo-intro {
-    0% { transform: scale(3.6); }
-    100% { transform: scale(1); }
+
+  /* ── INTRO SEQUENCE ─────────────────────────────────── */
+  /* Everything but the logo starts hidden; body.intro is removed by JS
+     once the logo has settled into its final nav position. */
+  body.intro #stars-canvas,
+  body.intro .nav-links,
+  body.intro .nav-cta,
+  body.intro .hero > *,
+  body.intro .ticker,
+  body.intro .stats-section,
+  body.intro section,
+  body.intro .hr-glow,
+  body.intro .cta-banner,
+  body.intro footer {
+    opacity: 0;
+    pointer-events: none;
+  }
+  #stars-canvas, .nav-links, .nav-cta, .hero > *, .ticker,
+  .stats-section, section, .hr-glow, .cta-banner, footer {
+    transition: opacity 0.9s ease;
   }
 
   .nav-logo span.orbit-icon {
@@ -685,7 +701,7 @@
   }
 </style>
 </head>
-<body>
+<body class="intro">
 
 <!-- Starfield Canvas -->
 <canvas id="stars-canvas"></canvas>
@@ -703,6 +719,21 @@
   </ul>
   <a href="/dashboard" class="nav-cta">LAUNCH DASHBOARD →</a>
 </nav>
+
+<script>
+// Position the logo centered/oversized on screen before first paint,
+// so the intro reads as "logo alone, then it moves to its nav slot."
+(function() {
+  var logo = document.querySelector('.nav-logo');
+  var rect = logo.getBoundingClientRect();
+  var logoCenterX = rect.left + rect.width / 2;
+  var logoCenterY = rect.top + rect.height / 2;
+  var dx = window.innerWidth / 2 - logoCenterX;
+  var dy = window.innerHeight / 2 - logoCenterY;
+  var scale = Math.min(2.8, (window.innerWidth * 0.6) / rect.width);
+  logo.style.transform = 'translate(' + dx + 'px, ' + dy + 'px) scale(' + scale + ')';
+})();
+</script>
 
 <!-- HERO -->
 <div class="hero">
@@ -989,6 +1020,29 @@
 </footer>
 
 <script>
+// ── INTRO SEQUENCE ─────────────────────────────────────────
+// Moves the centered/oversized logo back to its nav position, then
+// reveals the rest of the page once it has settled.
+(function() {
+  var logo = document.querySelector('.nav-logo');
+  var body = document.body;
+  var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  if (reduceMotion) {
+    logo.style.transform = 'none';
+    body.classList.remove('intro');
+    return;
+  }
+
+  window.addEventListener('load', function() {
+    setTimeout(function() {
+      logo.style.transition = 'transform 2.2s cubic-bezier(0.16, 1, 0.3, 1)';
+      logo.style.transform = 'translate(0, 0) scale(1)';
+      body.classList.remove('intro');
+    }, 1000);
+  });
+})();
+
 // ── STARFIELD ─────────────────────────────────────────────
 (function() {
   const canvas = document.getElementById('stars-canvas');

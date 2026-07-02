@@ -98,6 +98,28 @@
     .card { max-width:1100px; margin:0 auto; background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:24px; backdrop-filter:blur(4px); }
     .game-center { display:flex; align-items:center; justify-content:center; min-height:calc(100vh - 160px); }
     .game-center .card { width:100%; }
+    .quiz-start { display:flex; align-items:center; justify-content:center; min-height:320px; }
+    .quiz-start-btn {
+      display:inline-flex; align-items:center; gap:12px;
+      background:linear-gradient(135deg, #2563eb 0%, #38bdf8 100%);
+      color:#fff; border:none; padding:20px 48px; border-radius:999px;
+      font-family:'Space Grotesk', sans-serif; font-size:1.2rem; font-weight:700;
+      letter-spacing:0.04em; text-transform:uppercase; cursor:pointer;
+      box-shadow:0 10px 40px rgba(37,99,235,0.45), 0 0 0 1px rgba(255,255,255,0.08) inset;
+      transition: transform .25s cubic-bezier(0.16,1,0.3,1), box-shadow .25s ease, background .3s ease;
+      animation: quiz-btn-pulse 2.4s ease-in-out infinite;
+    }
+    .quiz-start-btn:hover {
+      transform: translateY(-4px) scale(1.04);
+      box-shadow:0 16px 55px rgba(56,189,248,0.55), 0 0 0 1px rgba(255,255,255,0.12) inset;
+      background:linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
+    }
+    .quiz-start-btn:active { transform: translateY(-1px) scale(0.98); }
+    .quiz-start-icon { font-size:1.35rem; filter:drop-shadow(0 0 6px rgba(56,189,248,0.8)); }
+    @keyframes quiz-btn-pulse {
+      0%,100% { box-shadow:0 10px 40px rgba(37,99,235,0.45), 0 0 0 1px rgba(255,255,255,0.08) inset; }
+      50%     { box-shadow:0 10px 55px rgba(56,189,248,0.65), 0 0 0 1px rgba(255,255,255,0.12) inset; }
+    }
     .option { display:block; margin:10px 0; padding:12px; background:rgba(255,255,255,.08); border-radius:10px; cursor:pointer; }
     .status { margin-top:16px; padding:12px; border-radius:10px; display:none; white-space:pre-wrap; }
     .success { background:rgba(16,185,129,.18); border:1px solid #10b981; }
@@ -158,7 +180,21 @@
     max-width: 1200px;
     margin: 20px auto;
     padding: 0 20px;
+    transition: grid-template-columns 0.7s cubic-bezier(0.16,1,0.3,1), max-width 0.7s cubic-bezier(0.16,1,0.3,1);
 }
+
+/* Before a scan runs, collapse to a single centered column so the
+   upload hub sits in the middle of the screen with no empty right side. */
+.dashboard-grid.pre-scan {
+    grid-template-columns: 1fr;
+    max-width: 640px;
+}
+
+#scanResult {
+    opacity: 0;
+    transition: opacity 0.6s ease 0.25s;
+}
+#scanResult.visible { opacity: 1; }
 
 /* Keeps everything within the upload side running straight downwards */
 .upload-column {
@@ -824,7 +860,11 @@
     </div>
     <div class="game-center">
       <div class="card">
-        <button class="action" id="btnStartQuiz">Start Quiz</button>
+        <div class="quiz-start" id="quizStartWrap">
+          <button class="quiz-start-btn" id="btnStartQuiz">
+            <span class="quiz-start-icon">🚀</span> Start Quiz
+          </button>
+        </div>
         <div id="quizCard" style="display:none; margin-top:16px;">
           <h3 id="questionText"></h3>
           <form id="answerForm"></form>
@@ -849,7 +889,7 @@
       <h2>SpaceShield AI — Debris Scanner</h2>
       <button class="back btn-back-home">Back Home</button>
     </div>
-    <div class="dashboard-grid">
+    <div class="dashboard-grid pre-scan" id="scannerDashboardGrid">
 
     <div class="upload-column">
         <h3>AI Optical Scanning Hub</h3>
@@ -1185,7 +1225,7 @@
       userAnswers = new Array(questions.length).fill(null);
       score = 0;
       
-      document.getElementById('btnStartQuiz').style.display = 'none';
+      document.getElementById('quizStartWrap').style.display = 'none';
       document.getElementById('quizSummary').style.display = 'none';
       document.getElementById('quizCard').style.display = 'block';
       renderQuestion();
@@ -1343,10 +1383,15 @@ document.getElementById('btnScanImage').addEventListener('click', async () => {
 
     if (!fileInput.files || fileInput.files.length === 0) {
         resultBox.style.display = 'block';
-        resultBox.className = 'status error';
+        resultBox.className = 'status error visible';
         resultBox.innerHTML = '<strong>Error:</strong> Please select or drop an image file before scanning.';
         return;
     }
+
+    // A real scan is starting — slide the upload hub from its centered
+    // starting position back to the left column and reveal the results side.
+    document.getElementById('scannerDashboardGrid').classList.remove('pre-scan');
+    resultBox.classList.add('visible');
 
     const formData = new FormData();
     formData.append('image', fileInput.files[0]);
@@ -1431,6 +1476,7 @@ function renderScanUI(data) {
   if (!resultDiv) return;
 
   resultDiv.style.display = 'block';
+  resultDiv.classList.add('visible');
 
   const hasTarget = data.detected || (data.target && !data.target.includes("No tracking signatures"));
   const targetLabel = data.label || data.target || "Unknown Fragment Profile";
