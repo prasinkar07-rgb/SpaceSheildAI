@@ -77,7 +77,7 @@ def chat():
             config={
                 'system_instruction': (
                     "You are the SpaceShield AI telemetry assistant. Keep every "
-                    "answer concise: respond in at most 5 short bullet points "
+                    "response concise and focused on the user's question. "
                     "(use '- ' for each), no long paragraphs, no headers, no "
                     "restating the question."
                 )
